@@ -1,6 +1,6 @@
 # UnitsNet Serialization Examples
 
-This project demonstrates how to use UnitsNet with ASP.NET Core for serializing and deserializing units of measurement using Newtonsoft.Json.
+This project demonstrates how to use UnitsNet with ASP.NET Core for serializing and deserializing units of measurement using custom AbbreviatedUnitsConverter and IQuantityJSONConverter.
 
 ## Project Structure
 
