@@ -1,0 +1,34 @@
+@ASP.Net.UnitsNetSerializationExamples_HostAddress = http://localhost:5183/UnitsNetConverter
+
+# GET Default Mass
+GET {{ASP.Net.UnitsNetSerializationExamples_HostAddress}}/default-mass
+Accept: application/json
+
+###
+
+# POST Process Mass
+POST {{ASP.Net.UnitsNetSerializationExamples_HostAddress}}/process-mass
+Content-Type: application/json
+Accept: application/json
+
+{
+  "unit": "MassUnit.Kilogram",
+  "value": 20.0
+}
+
+###
+
+POST {{ASP.Net.UnitsNetSerializationExamples_HostAddress}}/calculate-density
+Content-Type: application/json
+Accept: application/json
+
+{
+  "mass": {
+    "unit": "Kilogram",
+    "value": 1
+  },
+  "volume": {
+    "unit": "CubicMeter",
+    "value": 2
+  }
+}
