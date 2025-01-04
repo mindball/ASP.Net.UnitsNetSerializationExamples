@@ -1,4 +1,6 @@
+using ASP.Net.UnitsNetSerializationExamples.Filters;
 using Newtonsoft.Json;
+using System.Reflection;
 using UnitsNet.Serialization.JsonNet;
 using JsonConverter = Newtonsoft.Json.JsonConverter;
 
@@ -11,7 +13,16 @@ builder.Services.AddControllers().AddNewtonsoftJson(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    options.IncludeXmlComments(xmlPath);
+
+    options.EnableAnnotations();
+
+    options.SchemaFilter<QuantitiesSchemaFilter>();
+});
 
 var app = builder.Build();
 
