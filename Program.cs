@@ -1,6 +1,9 @@
-using ASP.Net.UnitsNetSerializationExamples.Filters;
-using Newtonsoft.Json;
 using System.Reflection;
+using ASP.Net.UnitsNetSerializationExamples;
+using ASP.Net.UnitsNetSerializationExamples.Filters;
+using Microsoft.OpenApi.Models;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using UnitsNet.Serialization.JsonNet;
 using JsonConverter = Newtonsoft.Json.JsonConverter;
 
@@ -9,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers().AddNewtonsoftJson(options =>
 {
     options.SerializerSettings.Formatting = Formatting.Indented;
+    options.SerializerSettings.Converters.Add(new StringEnumConverter());
     options.SerializerSettings.Converters.Add(CustomJsonConverterSetup(builder));
 });
 
@@ -18,10 +22,18 @@ builder.Services.AddSwaggerGen(options =>
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     options.IncludeXmlComments(xmlPath);
-
+    
     options.EnableAnnotations();
-
+    
     options.SchemaFilter<QuantitiesSchemaFilter>();
+   
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Version = "v1",
+        Title = "UnitsNet serialization examples, with additional custom mapping",
+    });
+    
+    options.SchemaGeneratorOptions.CustomTypeMappings = new Dictionary<Type, Func<OpenApiSchema>>().WithUnitsNet().WithAdditionalInfo();
 });
 
 var app = builder.Build();
