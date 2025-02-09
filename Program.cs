@@ -4,16 +4,19 @@ using ASP.Net.UnitsNetSerializationExamples.Filters;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using UnitsNet;
 using UnitsNet.Serialization.JsonNet;
 using JsonConverter = Newtonsoft.Json.JsonConverter;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var globalJsonConverter = InitializeGlobalJsonConverter(builder);
+
 builder.Services.AddControllers().AddNewtonsoftJson(options =>
 {
     options.SerializerSettings.Formatting = Formatting.Indented;
     options.SerializerSettings.Converters.Add(new StringEnumConverter());
-    options.SerializerSettings.Converters.Add(CustomJsonConverterSetup(builder));
+    if (globalJsonConverter != null) options.SerializerSettings.Converters.Add(globalJsonConverter);
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -26,14 +29,27 @@ builder.Services.AddSwaggerGen(options =>
     options.EnableAnnotations();
     
     options.SchemaFilter<QuantitiesSchemaFilter>();
-   
+    
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Version = "v1",
         Title = "UnitsNet serialization examples, with additional custom mapping",
     });
-    
-    options.SchemaGeneratorOptions.CustomTypeMappings = new Dictionary<Type, Func<OpenApiSchema>>().WithUnitsNet().WithAdditionalInfo();
+
+    // if (globalJsonConverter is AbbreviatedUnitsConverter)
+    // {
+    //     options.SchemaGeneratorOptions.CustomTypeMappings =
+    //         new Dictionary<Type, Func<OpenApiSchema>>()
+    //             .WithUnitsNet(CustomTypeMappingSwaggerExtension.ToOpenApiSchemaWithAbbreviations)
+    //             .WithAdditionalInfo();
+    // }
+    // else if (globalJsonConverter is UnitsNetIQuantityJsonConverter)
+    // {
+    //     options.SchemaGeneratorOptions.CustomTypeMappings =
+    //         new Dictionary<Type, Func<OpenApiSchema>>()
+    //             .WithUnitsNet(CustomTypeMappingSwaggerExtension.ToOpenApiSchemaWithUnits)
+    //             .WithAdditionalInfo();
+    // }
 });
 
 var app = builder.Build();
@@ -47,21 +63,22 @@ app.MapControllers();
 
 app.Run();
 
-static JsonConverter CustomJsonConverterSetup(WebApplicationBuilder builder)
+static JsonConverter? InitializeGlobalJsonConverter(WebApplicationBuilder builder)
 {
     var converterTypeName = builder.Configuration.GetSection("JsonConverter:Type").Value;
     if (string.IsNullOrEmpty(converterTypeName))
     {
-        throw new InvalidOperationException("JsonConverter type is not configured.");
+        return null; // Configuration is missing
     }
-
-    var converterType = Type.GetType(converterTypeName)
-                        ?? throw new InvalidOperationException($"Cannot load type for converter: {converterTypeName}");
-
+    var converterType = Type.GetType(converterTypeName);
+    if (converterType == null)
+    {
+        return null; // Type could not be loaded
+    }
     return converterType switch
     {
-        not null when converterType == typeof(UnitsNetIQuantityJsonConverter) => new UnitsNetIQuantityJsonConverter(),
-        not null when converterType == typeof(AbbreviatedUnitsConverter) => new AbbreviatedUnitsConverter(),
-        _ => throw new InvalidOperationException($"Unsupported converter type: {converterTypeName}")
+        _ when converterType == typeof(UnitsNetIQuantityJsonConverter) => new UnitsNetIQuantityJsonConverter(),
+        _ when converterType == typeof(AbbreviatedUnitsConverter) => new AbbreviatedUnitsConverter(),
+        _ => null
     };
 }
