@@ -68,6 +68,69 @@ public class UnitsNetConverterController: ControllerBase
     }
 
     /// <summary>
+    ///     Constructs a quantity using the specified unit abbreviation and value.
+    /// </summary>
+    /// <param name="unitName">
+    ///     The abbreviation of the unit to be used for constructing the quantity (e.g., "kg", "mg", 'cm', or 'mg/l').
+    /// </param>
+    /// <param name="value">
+    ///     The numerical value to be associated with the constructed quantity.
+    /// </param>
+    /// <returns>
+    ///     An <see cref="IActionResult" /> containing the constructed quantity if successful, 
+    ///     or a <see cref="BadRequestResult" /> if the unit abbreviation or value is invalid.
+    /// </returns>
+    /// <remarks>
+    ///     This method attempts to create a quantity by interpreting the provided unit abbreviation.
+    ///     If the abbreviation or value is invalid, an error response is returned.
+    /// </remarks>
+    /// <response code="200">
+    ///     Returns the constructed quantity.
+    /// </response>
+    /// <response code="400">
+    ///     Returns an error message if the unit abbreviation or value is invalid.
+    /// </response>
+    [HttpGet("construct-quantity-by-abbreviation")]
+    [SwaggerOperation(
+        Summary = "Constructs a quantity by abbreviation.",
+        Description = "Creates a quantity based on the provided unit abbreviation name,  and value.")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public IActionResult GetConstructQuantityByAbbreviation(string unitName, double value)
+    {
+        if (!Quantity.TryFromUnitAbbreviation(value, unitName, out IQuantity? quantity))
+            return BadRequest("Invalid quantity or unit name."); ;
+
+        return Ok(quantity);
+    }
+
+    /// <summary>
+    ///     Constructs a density quantity based on the provided density unit and value.
+    /// </summary>
+    /// <param name="unit">
+    ///     The unit of density to use for constructing the quantity (e.g., "KilogramPerCubicMeter").
+    /// </param>
+    /// <param name="value">
+    ///     The numeric value of the density.
+    /// </param>
+    /// <returns>
+    ///     An <see cref="IActionResult" /> containing the constructed density quantity if the input is valid.
+    ///     Returns a <c>BadRequest</c> result if the density unit is invalid.
+    /// </returns>
+    [HttpGet("construct-density-from-unit")]
+    [SwaggerOperation(
+        Summary = "Construct a density.",
+        Description = "Create a density based on the provided density unit.")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public IActionResult GetConstructDensityFromUnit(DensityUnit unit, double value)
+    {
+        if(!Quantity.TryFrom(value, unit, out var quantity))
+            return BadRequest("Invalid quantity unit."); ;
+        return Ok(quantity);
+    }
+
+    /// <summary>
     ///     Converts mass and volume values to a density value.
     /// </summary>
     /// <param name="massUnit">
@@ -95,7 +158,7 @@ public class UnitsNetConverterController: ControllerBase
         var volume = Volume.From(volumeValue, volumeUnit);
         
         Density density = mass / volume;
-
+       
         return Ok(density);
     }
 
@@ -107,6 +170,9 @@ public class UnitsNetConverterController: ControllerBase
     /// </param>
     /// <param name="targetUnitAbbreviation">
     ///     The abbreviation of the target unit (e.g., "kg" for Kilogram, "g" for Gram).
+    ///     It is important to have an abbreviation for the selected unit of measurement. Keep in mind that when using a custom mapping, the JSON pattern example applies to the unit of measurement,
+    ///     such as Density. If you need an abbreviation for Mass, use 'kg', 'mg', etc.; for Volume, use 'l', 'ml', and so on. In other words, the 'Unit' field in
+    ///     the JSON body must correspond to the abbreviation.
     /// </param>
     /// <returns>
     ///     An <see cref="IActionResult" /> containing the converted quantity if the input is valid.
@@ -115,6 +181,7 @@ public class UnitsNetConverterController: ControllerBase
     /// <remarks>
     ///     This method attempts to parse the provided unit abbreviation and convert the given quantity to the specified unit.
     ///     If the abbreviation is invalid or incompatible with the quantity, a <c>BadRequest</c> response is returned.
+    ///     
     /// </remarks>
     [HttpPost("convert-to-unit-with-abbreviation")]
     [SwaggerOperation(
@@ -128,33 +195,34 @@ public class UnitsNetConverterController: ControllerBase
         if (!UnitParser.Default.TryParse(targetUnitAbbreviation, quantity.Unit.GetType(), out var targetUnit))
             return BadRequest("Invalid quantity or unit abbreviation.");
 
-        //Feature request: if(UnitConverter.TryConvert(quantity, targetUnit, out convertedQuantity))
         return Ok(quantity.ToUnit(targetUnit));
     }
-
     
     /// <summary>
-    ///     Converts a given quantity to the specified density unit.
+    ///     Converts a given density quantity to a specified density unit.
     /// </summary>
     /// <param name="quantity">
-    ///     The quantity to be converted. This must implement the <see cref="IQuantity" /> interface.
+    ///     The density quantity to be converted. This is provided in the request body.
     /// </param>
     /// <param name="toDensityUnit">
-    ///     The target density unit to which the quantity will be converted. 
-    ///     This is specified as a <see cref="DensityUnit" />.
+    ///     The target density unit to which the quantity will be converted. This is provided as a query parameter.
     /// </param>
     /// <returns>
-    ///     An <see cref="IActionResult" /> containing the converted quantity in the specified density unit.
-    ///     Returns a <c>BadRequest</c> result if the conversion fails.
+    ///     An <see cref="IActionResult" /> containing the converted density value in the specified unit.
     /// </returns>
     /// <remarks>
-    ///     This method allows for the conversion of a quantity to a specific density unit, 
-    ///     leveraging the UnitsNet library for unit conversions.
+    ///     This method takes a <see cref="Density" /> object and a target <see cref="DensityUnit" /> as input, 
+    ///     performs the conversion, and returns the result.
     /// </remarks>
+    /// <response code="200">
+    ///     Returns the converted density value in the specified unit.
+    /// </response>
     [HttpPost("convert-quantity-unit")]
-    public IActionResult ConvertDensityUnit([FromBody] IQuantity quantity, [FromQuery] DensityUnit toDensityUnit)
+    // public IActionResult ConvertDensityUnitV1([FromBody] IQuantity quantity, [FromQuery] DensityUnit toDensityUnit)  worked
+    public IActionResult ConvertDensityUnit([FromBody] Density quantity, [FromQuery] DensityUnit toDensityUnit)
     {
-        var convertedLengthUnit = quantity.ToUnit(toDensityUnit);
-        return Ok(convertedLengthUnit);
+        var convertedDensityUnit = quantity.ToUnit(toDensityUnit);
+        return Ok(convertedDensityUnit);
     }
+   
 }

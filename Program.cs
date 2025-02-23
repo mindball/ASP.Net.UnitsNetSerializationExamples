@@ -30,26 +30,29 @@ builder.Services.AddSwaggerGen(options =>
     
     options.SchemaFilter<QuantitiesSchemaFilter>();
     
+    
+
+    if (globalJsonConverter is AbbreviatedUnitsConverter)
+    {
+        options.SchemaGeneratorOptions.CustomTypeMappings =
+            new Dictionary<Type, Func<OpenApiSchema>>()
+                .WithUnitsNet(CustomTypeMappingSwaggerExtension.ToOpenApiSchemaWithAbbreviations, true, true)
+                .WithAdditionalInfo();
+    }
+    else if (globalJsonConverter is UnitsNetIQuantityJsonConverter)
+    {
+        options.SchemaGeneratorOptions.CustomTypeMappings =
+            new Dictionary<Type, Func<OpenApiSchema>>()
+                .WithUnitsNet(CustomTypeMappingSwaggerExtension.ToOpenApiSchemaWithUnits, true, false)
+                .WithAdditionalInfo();
+    }
+
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Version = "v1",
         Title = "UnitsNet serialization examples, with additional custom mapping",
+        Description = $"Used converter: {globalJsonConverter?.GetType().Name}"
     });
-
-    // if (globalJsonConverter is AbbreviatedUnitsConverter)
-    // {
-    //     options.SchemaGeneratorOptions.CustomTypeMappings =
-    //         new Dictionary<Type, Func<OpenApiSchema>>()
-    //             .WithUnitsNet(CustomTypeMappingSwaggerExtension.ToOpenApiSchemaWithAbbreviations)
-    //             .WithAdditionalInfo();
-    // }
-    // else if (globalJsonConverter is UnitsNetIQuantityJsonConverter)
-    // {
-    //     options.SchemaGeneratorOptions.CustomTypeMappings =
-    //         new Dictionary<Type, Func<OpenApiSchema>>()
-    //             .WithUnitsNet(CustomTypeMappingSwaggerExtension.ToOpenApiSchemaWithUnits)
-    //             .WithAdditionalInfo();
-    // }
 });
 
 var app = builder.Build();

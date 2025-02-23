@@ -3,13 +3,13 @@ using System.Xml;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using UnitsNet;
+using UnitsNet.Units;
 
 
 namespace ASP.Net.UnitsNetSerializationExamples;
 
 public static class CustomTypeMappingSwaggerExtension
 {
-    // TODO move to the swagger extensions
     private const string DocumentationHost = "https://github.com/angularsen/UnitsNet";
 
     /// <summary>
@@ -70,78 +70,29 @@ public static class CustomTypeMappingSwaggerExtension
     }
 
     /// <summary>
-    /// Extends the provided mappings with UnitsNet quantities.
+    /// Extends the provided dictionary of type mappings with additional mappings for UnitsNet types.
     /// </summary>
-    /// <typeparam name="TDictionary">The type of the dictionary.</typeparam>
-    /// <param name="mappings">The mappings to be extended.</param>
-    /// <param name="includingIQuantity">If set to <c>true</c>, includes IQuantity in the mappings.</param>
-    /// <param name="xmlPath">The XML path for documentation.</param>
-    /// <returns>The extended mappings.</returns>
-    /// <remarks>
-    /// This method is used to extend the provided mappings with UnitsNet quantities. 
-    /// If the 'includingIQuantity' parameter is set to true, it also includes IQuantity in the mappings.
-    /// The 'xmlPath' parameter can be used to specify the XML path for documentation.
-    /// </remarks>
-    public static TDictionary WithUnitsNet<TDictionary>(this TDictionary mappings, bool includingIQuantity = false, string xmlPath = null)
-        where TDictionary : IDictionary<Type, Func<OpenApiSchema>>
-    {
-        var assembly = typeof(Quantity).Assembly;
-        foreach (var quantityInfo in Quantity.Infos)
-        {
-            var quantityStruct = assembly.GetType("UnitsNet." + quantityInfo.Name);
-            var openApiSchema = quantityInfo.ToOpenApiSchema(quantityStruct, xmlPath);
-            mappings[quantityStruct!] = openApiSchema;
-        }
-
-        if (!includingIQuantity)
-            return mappings;
-        // var custom = $"A generic quantity such as [{exampleQuantityInfo.Name}]({DocumentationHost}/api/units/UnitsNet.IQuantity.html)",
-
-        //TODO ask them  if it's worth adding when pulling this feature
-        mappings[typeof(IQuantity)] = () =>
-        {
-            var example = Mass.FromKilograms(1);
-            var exampleQuantityInfo = example.QuantityInfo;
-            return new OpenApiSchema()
-            {
-                Description = $"A generic quantity such as [{exampleQuantityInfo.Name}]",
-                ExternalDocs = new OpenApiExternalDocs()
-                {
-                    Url = new Uri("https://github.com/angularsen/UnitsNet/blob/master/UnitsNet/IQuantity.cs"),
-                    Description = "github"
-                },
-                Type = "object",
-                Properties = new Dictionary<string, OpenApiSchema>
-                {
-                    {
-                        "Value", new OpenApiSchema
-                        {
-                            Type = "number",
-                            Example = new OpenApiDouble(example.Value)
-                        }
-                    },
-                    {
-                        "Unit", new OpenApiSchema
-                        {
-                            Type = "enum",
-                            Example = new OpenApiString(example.ToString("a", CultureInfo.InvariantCulture)),
-                        }
-                    },
-                    {
-                        "Type", new OpenApiSchema
-                        {
-                            Type = "string",
-                            Default = new OpenApiString(exampleQuantityInfo.Name)
-                        }
-                    }
-                }
-            };
-        };
-
-        return mappings;
-    }
-
-    public static TDictionary WithUnitsNet<TDictionary>(this TDictionary mappings, Func<QuantityInfo, Type, string, Func<OpenApiSchema>> toOpenApiSchemaMethod, bool includingIQuantity = false, string xmlPath = null)
+    /// <typeparam name="TDictionary">
+    /// The type of the dictionary, which must implement <see cref="IDictionary{Type, Func{OpenApiSchema}}"/>.
+    /// </typeparam>
+    /// <param name="mappings">
+    /// The dictionary of type mappings to extend.
+    /// </param>
+    /// <param name="toOpenApiSchemaMethod">
+    /// A method that converts a <see cref="QuantityInfo"/>, its corresponding UnitsNet type, and an optional XML documentation path
+    /// into a function that generates an <see cref="OpenApiSchema"/>.
+    /// </param>
+    /// <param name="includingIQuantity">
+    /// A boolean value indicating whether to include a generic mapping for <see cref="IQuantity"/>. Defaults to <c>false</c>.
+    /// </param>
+    /// <param name="includeAbreviationMapping"></param>
+    /// <param name="xmlPath">
+    /// An optional path to the XML documentation file for extracting additional metadata.
+    /// </param>
+    /// <returns>
+    /// The extended dictionary of type mappings.
+    /// </returns>
+    public static TDictionary WithUnitsNet<TDictionary>(this TDictionary mappings, Func<QuantityInfo, Type, string, Func<OpenApiSchema>> toOpenApiSchemaMethod, bool includingIQuantity = false, bool includeAbreviationMapping = false,string xmlPath = null)
         where TDictionary : IDictionary<Type, Func<OpenApiSchema>>
     {
         var assembly = typeof(Quantity).Assembly;
@@ -155,7 +106,8 @@ public static class CustomTypeMappingSwaggerExtension
         if (!includingIQuantity)
             return mappings;
 
-        mappings[typeof(IQuantity)] = () =>
+        if(includeAbreviationMapping)
+            mappings[typeof(IQuantity)] = () =>
         {
             var example = Mass.FromKilograms(1);
             var exampleQuantityInfo = example.QuantityInfo;
@@ -194,53 +146,43 @@ public static class CustomTypeMappingSwaggerExtension
                 }
             };
         };
-
+        else
+            mappings[typeof(IQuantity)] = () =>
+            {
+                var example = Density.FromGramsPerLiter(1);
+                var unitTypeName = example.Unit.GetType().Name;
+                var unitExample = $"{unitTypeName}.{DensityUnit.GramPerLiter}";
+                return new OpenApiSchema()
+                {
+                    Description = $"A generic quantity such as [{unitTypeName}]",
+                    ExternalDocs = new OpenApiExternalDocs()
+                    {
+                        Url = new Uri("https://github.com/angularsen/UnitsNet/blob/master/UnitsNet/IQuantity.cs"),
+                        Description = "github"
+                    },
+                    Type = "object",
+                    Properties = new Dictionary<string, OpenApiSchema>
+                    {
+                        {
+                            "unit", new OpenApiSchema
+                            {
+                                Type = "enum",
+                                Example = new OpenApiString(unitExample)
+                            }
+                        },
+                        {
+                            "value", new OpenApiSchema
+                            {
+                                Type = "number",
+                                Example = new OpenApiDouble(example.Value)
+                            }
+                        }
+                    }
+                };
+            };
         return mappings;
     }
-
-    private static Func<OpenApiSchema> ToOpenApiSchema(this QuantityInfo quantityInfo, Type unitsNetType, string xmlPath = null)
-    {
-        var example = Quantity.FromQuantityInfo(quantityInfo, 1);
-        var unitAbbreviationsCache = UnitsNetSetup.Default.UnitAbbreviations;
-        var abbreviations =
-            unitAbbreviationsCache.GetAllUnitAbbreviationsForQuantity(quantityInfo.UnitType,
-                CultureInfo.InvariantCulture);
-        List<IOpenApiAny> enumValues = abbreviations.Select(a => (IOpenApiAny) new OpenApiString(a)).ToList();
-
-        return () => new OpenApiSchema
-        {
-            Type = "object",
-            Description = ExtractXmlSummary(example, xmlPath) ?? null, //TODO provide default Description, 
-
-            ExternalDocs = new OpenApiExternalDocs
-            {
-                Description = "UnitsNet documentation",
-                Url = new Uri("https://github.com/angularsen/UnitsNet")
-            },
-            Example = new OpenApiObject
-            {
-                ["Value"] = new OpenApiDouble((double) example.Value),
-                ["Unit"] = new OpenApiString(example.ToString("a", CultureInfo.InvariantCulture)),
-                ["Type"] = new OpenApiString(quantityInfo.Name)
-            },
-            Properties = new Dictionary<string, OpenApiSchema>
-            {
-                {"Value", new OpenApiSchema {Type = "number", Example = new OpenApiDouble((double) example.Value)}},
-                {
-                    "Unit",
-                    new OpenApiSchema
-                    {
-                        Type = "string",
-                        Format = "enum",
-                        Enum = enumValues,
-                        Example = new OpenApiString(example.ToString("a", CultureInfo.InvariantCulture))
-                    }
-                },
-                {"Type", new OpenApiSchema {Type = "string", Default = new OpenApiString(quantityInfo.Name)}}
-            }
-        };
-    }
-
+    
     /// <summary>
     /// Converts a <see cref="QuantityInfo"/> instance into an OpenAPI schema representation, 
     /// including unit abbreviations and additional metadata.
@@ -293,7 +235,7 @@ public static class CustomTypeMappingSwaggerExtension
                         Type = "string",
                         Format = "enum",
                         Enum = enumValues,
-                        Example = new OpenApiString(example.ToString("a", CultureInfo.InvariantCulture))
+                        Example = new OpenApiString(example.ToString())
                     }
                 },
                 {"Type", new OpenApiSchema {Type = "string", Default = new OpenApiString(quantityInfo.Name)}}
@@ -320,7 +262,8 @@ public static class CustomTypeMappingSwaggerExtension
     public static Func<OpenApiSchema> ToOpenApiSchemaWithUnits(this QuantityInfo quantityInfo, Type unitsNetType, string xmlPath = null)
     {
         var example = Quantity.FromQuantityInfo(quantityInfo, 1);
-
+        var unitTypeName = quantityInfo.UnitType.Name;
+        var unitExample = $"{unitTypeName}.{DensityUnit.GramPerLiter}";
         return () => new OpenApiSchema
         {
             Type = "object",
@@ -332,13 +275,13 @@ public static class CustomTypeMappingSwaggerExtension
             },
             Example = new OpenApiObject
             {
+                ["unit"] = new OpenApiString(unitExample),
                 ["value"] = new OpenApiDouble(example.Value),
-                ["unit"] = new OpenApiString(example.QuantityInfo.UnitType.ToString())
             },
             Properties = new Dictionary<string, OpenApiSchema>
             {
-                {"value", new OpenApiSchema {Type = "number", Example = new OpenApiDouble(example.Value)}},
-                {"unit", new OpenApiSchema {Type = "string", Default = new OpenApiString(example.QuantityInfo.UnitType.ToString())}}
+                {"unit", new OpenApiSchema {Type = "string", Default = new OpenApiString(unitExample)}},
+                {"value", new OpenApiSchema {Type = "number", Example = new OpenApiDouble(example.Value)}}
             }
         };
     }
