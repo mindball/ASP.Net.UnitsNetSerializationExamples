@@ -1,3 +1,4 @@
+﻿using System.Globalization;
 using System.Runtime.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -53,54 +54,17 @@ public class UnitsNetConverterController: ControllerBase
     ///     An <see cref="IActionResult" /> containing the constructed quantity if the input is valid.
     ///     Returns a <c>BadRequest</c> result if the quantity name or unit name is invalid.
     /// </returns>
-    [HttpGet("construct-quantity")]
+    [HttpGet("construct-quantity-by-name")]
     [SwaggerOperation(
         Summary = "Constructs a quantity.",
         Description = "Creates a quantity based on the provided quantity name, unit name, and value.")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public IActionResult GetConstructQuantity(string quantityName, string unitName, double value)
+    public IActionResult GetConstructQuantityByName(string quantityName, string unitName, double value)
     {
         if (!Quantity.TryFrom(value, quantityName, unitName, out var quantity)) 
             return BadRequest("Invalid quantity or unit name."); ;
         
-        return Ok(quantity);
-    }
-
-    /// <summary>
-    ///     Constructs a quantity using the specified unit abbreviation and value.
-    /// </summary>
-    /// <param name="unitName">
-    ///     The abbreviation of the unit to be used for constructing the quantity (e.g., "kg", "mg", 'cm', or 'mg/l').
-    /// </param>
-    /// <param name="value">
-    ///     The numerical value to be associated with the constructed quantity.
-    /// </param>
-    /// <returns>
-    ///     An <see cref="IActionResult" /> containing the constructed quantity if successful, 
-    ///     or a <see cref="BadRequestResult" /> if the unit abbreviation or value is invalid.
-    /// </returns>
-    /// <remarks>
-    ///     This method attempts to create a quantity by interpreting the provided unit abbreviation.
-    ///     If the abbreviation or value is invalid, an error response is returned.
-    /// </remarks>
-    /// <response code="200">
-    ///     Returns the constructed quantity.
-    /// </response>
-    /// <response code="400">
-    ///     Returns an error message if the unit abbreviation or value is invalid.
-    /// </response>
-    [HttpGet("construct-quantity-by-abbreviation")]
-    [SwaggerOperation(
-        Summary = "Constructs a quantity by abbreviation.",
-        Description = "Creates a quantity based on the provided unit abbreviation name,  and value.")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public IActionResult GetConstructQuantityByAbbreviation(string unitName, double value)
-    {
-        if (!Quantity.TryFromUnitAbbreviation(value, unitName, out IQuantity? quantity))
-            return BadRequest("Invalid quantity or unit name."); ;
-
         return Ok(quantity);
     }
 
@@ -149,8 +113,8 @@ public class UnitsNetConverterController: ControllerBase
     ///     An <see cref="IActionResult" /> containing the converted density value in the specified unit.
     ///     Returns a <c>BadRequest</c> result if the volume value is zero or negative.
     /// </returns>
-    [HttpGet("conversion-from-massUnit-volumeUnit-to-density")]
-    public IActionResult ConvertFromMassAndVolumeToDensity(MassUnit massUnit, double massValue, VolumeUnit volumeUnit, double volumeValue)
+    [HttpGet("create-density-from-massUnit-and-volumeUnit")]
+    public IActionResult CreateDensityFromMassAndVolume(MassUnit massUnit, double massValue, VolumeUnit volumeUnit, double volumeValue)
     {
         if (volumeValue == 0) return BadRequest("Volume value must be positive quantity value");
         
@@ -171,7 +135,7 @@ public class UnitsNetConverterController: ControllerBase
     /// <param name="targetUnitAbbreviation">
     ///     The abbreviation of the target unit (e.g., "kg" for Kilogram, "g" for Gram).
     ///     It is important to have an abbreviation for the selected unit of measurement. Keep in mind that when using a custom mapping, the JSON pattern example applies to the unit of measurement,
-    ///     such as Density. If you need an abbreviation for Mass, use 'kg', 'mg', etc.; for Volume, use 'l', 'ml', and so on. In other words, the 'Unit' field in
+    ///     such as Density(g/ml, kg/cm³). If you need an abbreviation for Mass, use 'kg', 'mg', etc.; for Volume, use 'l', 'ml', and so on. In other words, the 'Unit' field in
     ///     the JSON body must correspond to the abbreviation.
     /// </param>
     /// <returns>
@@ -217,12 +181,56 @@ public class UnitsNetConverterController: ControllerBase
     /// <response code="200">
     ///     Returns the converted density value in the specified unit.
     /// </response>
-    [HttpPost("convert-quantity-unit")]
+    [HttpPost("convert-density-unit")]
     // public IActionResult ConvertDensityUnitV1([FromBody] IQuantity quantity, [FromQuery] DensityUnit toDensityUnit)  worked
     public IActionResult ConvertDensityUnit([FromBody] Density quantity, [FromQuery] DensityUnit toDensityUnit)
     {
         var convertedDensityUnit = quantity.ToUnit(toDensityUnit);
         return Ok(convertedDensityUnit);
     }
-   
+
+    /// <summary>
+    ///     Constructs a quantity using the specified unit abbreviation and value.
+    /// </summary>
+    /// <param name="unitAbbreviation">
+    ///     The abbreviation of the unit to be used for constructing the quantity (e.g., "kg", "mg", 'cm', or 'mg/l').
+    /// </param>
+    /// <param name="value">
+    ///     The numerical value to be associated with the constructed quantity.
+    /// </param>
+    /// <returns>
+    ///     An <see cref="IActionResult" /> containing the constructed quantity if successful, 
+    ///     or a <see cref="BadRequestResult" /> if the unit abbreviation or value is invalid.
+    /// </returns>
+    /// <remarks>
+    ///     This method attempts to create a quantity by interpreting the provided unit abbreviation.
+    ///     If the abbreviation or value is invalid, an error response is returned.
+    /// </remarks>
+    /// <response code="200">
+    ///     Returns the constructed quantity.
+    /// </response>
+    /// <response code="400">
+    ///     Returns an error message if the unit abbreviation or value is invalid.
+    /// </response>
+    [HttpGet("construct-quantity-by-abbreviation")]
+    [Obsolete("This route is deprecated and will be removed in future versions. Please use the new route for constructing quantities.")]
+    [SwaggerOperation(
+        Summary = "Constructs a quantity by abbreviation (Deprecated).",
+        Description = "This route is deprecated and will be removed in future versions. Creates a quantity based on the provided unit abbreviation name and value.")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public IActionResult GetConstructQuantityByAbbreviation(string unitAbbreviation, double value)
+    {
+        IQuantity quantity;
+        try
+        {
+            quantity = Quantity.FromUnitAbbreviation(value, unitAbbreviation);
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
+
+        return Ok(quantity);
+    }
 }

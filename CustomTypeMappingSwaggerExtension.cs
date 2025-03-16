@@ -8,6 +8,15 @@ using UnitsNet.Units;
 
 namespace ASP.Net.UnitsNetSerializationExamples;
 
+/// <summary>
+/// Provides extension methods for customizing Swagger/OpenAPI schema generation
+/// with mappings for <see cref="UnitsNet.IQuantity"/> and its derived types.
+/// </summary>
+/// <remarks>
+/// This class includes methods to add mappings for UnitsNet quantities to Swagger/OpenAPI schemas,
+/// enabling enhanced documentation and support for UnitsNet types in API specifications.
+/// It also provides functionality to include additional resources and metadata, such as external documentation links.
+/// </remarks>
 public static class CustomTypeMappingSwaggerExtension
 {
     private const string DocumentationHost = "https://github.com/angularsen/UnitsNet";
@@ -21,7 +30,7 @@ public static class CustomTypeMappingSwaggerExtension
     /// This method is used to extend the provided mappings with additional information. 
     /// It adds an external documentation link to each mapping, pointing to the UnitsNet Documentation portal.
     /// </remarks>
-    public static Dictionary<Type, Func<OpenApiSchema>> WithAdditionalInfo(
+    public static Dictionary<Type, Func<OpenApiSchema>> WithAdditionalResourcesInfo(
         this Dictionary<Type, Func<OpenApiSchema>> mappings)
     {
         // TODO
@@ -69,30 +78,30 @@ public static class CustomTypeMappingSwaggerExtension
         return null;
     }
 
+
     /// <summary>
-    /// Extends the provided dictionary of type mappings with additional mappings for UnitsNet types.
+    /// Adds a mapping for <see cref="UnitsNet.IQuantity"/> and its derived types to the provided dictionary.
     /// </summary>
-    /// <typeparam name="TDictionary">
-    /// The type of the dictionary, which must implement <see cref="IDictionary{Type, Func{OpenApiSchema}}"/>.
-    /// </typeparam>
-    /// <param name="mappings">
-    /// The dictionary of type mappings to extend.
-    /// </param>
+    /// <typeparam name="TDictionary">The type of the dictionary to which the mappings will be added.</typeparam>
+    /// <param name="mappings">The dictionary to which the mappings will be added.</param>
     /// <param name="toOpenApiSchemaMethod">
-    /// A method that converts a <see cref="QuantityInfo"/>, its corresponding UnitsNet type, and an optional XML documentation path
-    /// into a function that generates an <see cref="OpenApiSchema"/>.
+    /// A method that generates an <see cref="Microsoft.OpenApi.Models.OpenApiSchema"/> for a given 
+    /// <see cref="UnitsNet.QuantityInfo"/>, type, and optional XML documentation path.
     /// </param>
-    /// <param name="includingIQuantity">
-    /// A boolean value indicating whether to include a generic mapping for <see cref="IQuantity"/>. Defaults to <c>false</c>.
-    /// </param>
-    /// <param name="includeAbreviationMapping"></param>
+    /// <param name="includingIQuantity"></param>
     /// <param name="xmlPath">
-    /// An optional path to the XML documentation file for extracting additional metadata.
+    /// An optional path to the XML documentation file that provides additional metadata for the schema.
     /// </param>
-    /// <returns>
-    /// The extended dictionary of type mappings.
-    /// </returns>
-    public static TDictionary WithUnitsNet<TDictionary>(this TDictionary mappings, Func<QuantityInfo, Type, string, Func<OpenApiSchema>> toOpenApiSchemaMethod, bool includingIQuantity = false, bool includeAbreviationMapping = false,string xmlPath = null)
+    /// <returns>The dictionary with the added mappings for <see cref="UnitsNet.IQuantity"/> and its derived types.</returns>
+    /// <remarks>
+    /// This method iterates through all quantities defined in the UnitsNet library and adds mappings for each quantity type.
+    /// Additionally, it adds a generic mapping for <see cref="UnitsNet.IQuantity"/> with a predefined schema.
+    /// </remarks>
+    public static TDictionary AddIQuantityMapping<TDictionary>(
+        this TDictionary mappings,
+        Func<QuantityInfo, Type, string, Func<OpenApiSchema>> toOpenApiSchemaMethod,
+        bool includingIQuantity = true,
+        string? xmlPath = null)
         where TDictionary : IDictionary<Type, Func<OpenApiSchema>>
     {
         var assembly = typeof(Quantity).Assembly;
@@ -106,8 +115,77 @@ public static class CustomTypeMappingSwaggerExtension
         if (!includingIQuantity)
             return mappings;
 
-        if(includeAbreviationMapping)
-            mappings[typeof(IQuantity)] = () =>
+        mappings[typeof(IQuantity)] = () =>
+        {
+            var example = Density.FromGramsPerLiter(1);
+            var unitTypeName = example.Unit.GetType().Name;
+            var unitExample = $"{unitTypeName}.{DensityUnit.GramPerLiter}";
+            return new OpenApiSchema()
+            {
+                Description = $"A generic quantity such as [{unitTypeName}]",
+                ExternalDocs = new OpenApiExternalDocs()
+                {
+                    Url = new Uri("https://github.com/angularsen/UnitsNet/blob/master/UnitsNet/IQuantity.cs"),
+                    Description = "github"
+                },
+                Type = "object",
+                Properties = new Dictionary<string, OpenApiSchema>
+                {
+                    {
+                        "unit", new OpenApiSchema
+                        {
+                            Type = "enum",
+                            Example = new OpenApiString(unitExample)
+                        }
+                    },
+                    {
+                        "value", new OpenApiSchema
+                        {
+                            Type = "number",
+                            Example = new OpenApiDouble(example.Value)
+                        }
+                    }
+                }
+            };
+        };
+        return mappings;
+    }
+
+
+    /// <summary>
+    /// Adds mappings for <see cref="IQuantity"/> types, including abbreviations, to the provided dictionary.
+    /// </summary>
+    /// <typeparam name="TDictionary">The type of the dictionary to which the mappings will be added.</typeparam>
+    /// <param name="mappings">The dictionary to which the mappings will be added.</param>
+    /// <param name="toOpenApiSchemaMethod">
+    /// A method that generates an <see cref="OpenApiSchema"/> for a given <see cref="QuantityInfo"/>, type, and optional XML documentation path.
+    /// </param>
+    /// <param name="includingIQuantity"></param>
+    /// <param name="xmlPath">The optional path to the XML documentation file.</param>
+    /// <returns>The updated dictionary with the added mappings.</returns>
+    /// <remarks>
+    /// This method extends the provided dictionary with mappings for <see cref="IQuantity"/> types, including their abbreviations.
+    /// It also includes a generic mapping for <see cref="IQuantity"/> with an example schema and external documentation link.
+    /// </remarks>
+    public static TDictionary AddIQuantityWithAbbreviationMapping<TDictionary>(
+        this TDictionary mappings,
+        Func<QuantityInfo, Type, string, Func<OpenApiSchema>> toOpenApiSchemaMethod,
+        bool includingIQuantity = true,
+        string? xmlPath = null)
+        where TDictionary : IDictionary<Type, Func<OpenApiSchema>>
+    {
+        var assembly = typeof(Quantity).Assembly;
+        foreach (var quantityInfo in Quantity.Infos)
+        {
+            var quantityStruct = assembly.GetType("UnitsNet." + quantityInfo.Name);
+            var openApiSchema = toOpenApiSchemaMethod(quantityInfo, quantityStruct, xmlPath);
+            mappings[quantityStruct!] = openApiSchema;
+        }
+
+        if (!includingIQuantity)
+            return mappings;
+
+        mappings[typeof(IQuantity)] = () =>
         {
             var example = Mass.FromKilograms(1);
             var exampleQuantityInfo = example.QuantityInfo;
@@ -146,43 +224,9 @@ public static class CustomTypeMappingSwaggerExtension
                 }
             };
         };
-        else
-            mappings[typeof(IQuantity)] = () =>
-            {
-                var example = Density.FromGramsPerLiter(1);
-                var unitTypeName = example.Unit.GetType().Name;
-                var unitExample = $"{unitTypeName}.{DensityUnit.GramPerLiter}";
-                return new OpenApiSchema()
-                {
-                    Description = $"A generic quantity such as [{unitTypeName}]",
-                    ExternalDocs = new OpenApiExternalDocs()
-                    {
-                        Url = new Uri("https://github.com/angularsen/UnitsNet/blob/master/UnitsNet/IQuantity.cs"),
-                        Description = "github"
-                    },
-                    Type = "object",
-                    Properties = new Dictionary<string, OpenApiSchema>
-                    {
-                        {
-                            "unit", new OpenApiSchema
-                            {
-                                Type = "enum",
-                                Example = new OpenApiString(unitExample)
-                            }
-                        },
-                        {
-                            "value", new OpenApiSchema
-                            {
-                                Type = "number",
-                                Example = new OpenApiDouble(example.Value)
-                            }
-                        }
-                    }
-                };
-            };
         return mappings;
     }
-    
+
     /// <summary>
     /// Converts a <see cref="QuantityInfo"/> instance into an OpenAPI schema representation, 
     /// including unit abbreviations and additional metadata.
