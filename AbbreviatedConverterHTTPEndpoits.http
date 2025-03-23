@@ -1,4 +1,4 @@
-@ASP.Net.UnitsNetSerializationExamples_HostAddress = http://localhost:5183/UnitsNetConverter
+﻿@ASP.Net.UnitsNetSerializationExamples_HostAddress = http://localhost:5183/UnitsNetConverter
 @Volume = Volume
 @VolumeMsr = Liter
 @UnitValue1 = 2.5
@@ -40,9 +40,11 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "unit": "DensityUnit.GramPerLiter",
-  "value": 1
+  "Value": 1,
+  "Unit": "kg/m³",
+  "Type": "Density"
 }
+
 
 ###
 
@@ -52,8 +54,9 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "unit": "DensityUnit.GramPerLiter",
-  "value": 1
+  "Value": 1,
+  "Unit": "kg/m³",
+  "Type": "Density"
 }
 
 ###

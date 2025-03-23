@@ -6,11 +6,11 @@ using UnitsNet;
 using UnitsNet.Units;
 
 
-namespace ASP.Net.UnitsNetSerializationExamples;
+namespace ASP.Net.UnitsNetSerializationExamples.Extensions;
 
 /// <summary>
 /// Provides extension methods for customizing Swagger/OpenAPI schema generation
-/// with mappings for <see cref="UnitsNet.IQuantity"/> and its derived types.
+/// with mappings for <see cref="IQuantity"/> and its derived types.
 /// </summary>
 /// <remarks>
 /// This class includes methods to add mappings for UnitsNet quantities to Swagger/OpenAPI schemas,
@@ -80,22 +80,22 @@ public static class CustomTypeMappingSwaggerExtension
 
 
     /// <summary>
-    /// Adds a mapping for <see cref="UnitsNet.IQuantity"/> and its derived types to the provided dictionary.
+    /// Adds a mapping for <see cref="IQuantity"/> and its derived types to the provided dictionary.
     /// </summary>
     /// <typeparam name="TDictionary">The type of the dictionary to which the mappings will be added.</typeparam>
     /// <param name="mappings">The dictionary to which the mappings will be added.</param>
     /// <param name="toOpenApiSchemaMethod">
-    /// A method that generates an <see cref="Microsoft.OpenApi.Models.OpenApiSchema"/> for a given 
-    /// <see cref="UnitsNet.QuantityInfo"/>, type, and optional XML documentation path.
+    /// A method that generates an <see cref="OpenApiSchema"/> for a given 
+    /// <see cref="QuantityInfo"/>, type, and optional XML documentation path.
     /// </param>
     /// <param name="includingIQuantity"></param>
     /// <param name="xmlPath">
     /// An optional path to the XML documentation file that provides additional metadata for the schema.
     /// </param>
-    /// <returns>The dictionary with the added mappings for <see cref="UnitsNet.IQuantity"/> and its derived types.</returns>
+    /// <returns>The dictionary with the added mappings for <see cref="IQuantity"/> and its derived types.</returns>
     /// <remarks>
     /// This method iterates through all quantities defined in the UnitsNet library and adds mappings for each quantity type.
-    /// Additionally, it adds a generic mapping for <see cref="UnitsNet.IQuantity"/> with a predefined schema.
+    /// Additionally, it adds a generic mapping for <see cref="IQuantity"/> with a predefined schema.
     /// </remarks>
     public static TDictionary AddIQuantityMapping<TDictionary>(
         this TDictionary mappings,
