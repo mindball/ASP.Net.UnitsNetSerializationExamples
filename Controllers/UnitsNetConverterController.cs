@@ -35,7 +35,7 @@ public class UnitsNetConverterController: ControllerBase
         Description = "Returns the default length value, represented as Length.Zero."
     )]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public IActionResult GetMass()
+    public ActionResult<Mass> GetMass()
         => Ok(Mass.Zero);
     
     /// <summary>
@@ -60,7 +60,7 @@ public class UnitsNetConverterController: ControllerBase
         Description = "Creates a quantity based on the provided quantity name, unit name, and value.")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public IActionResult GetConstructQuantityByName(string quantityName, string unitName, double value)
+    public ActionResult<IQuantity> GetConstructQuantityByName(string quantityName, string unitName, double value)
     {
         if (!Quantity.TryFrom(value, quantityName, unitName, out var quantity)) 
             return BadRequest("Invalid quantity or unit name."); ;
@@ -87,9 +87,9 @@ public class UnitsNetConverterController: ControllerBase
         Description = "Create a density based on the provided density unit.")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public IActionResult GetConstructDensityFromUnit(DensityUnit unit, double value)
+    public ActionResult<Density> GetConstructDensityFromUnit(DensityUnit unit, double value)
     {
-        if(!Quantity.TryFrom(value, unit, out var quantity))
+        if (!Quantity.TryFrom(value, unit, out var quantity))
             return BadRequest("Invalid quantity unit."); ;
         return Ok(quantity);
     }
@@ -114,15 +114,15 @@ public class UnitsNetConverterController: ControllerBase
     ///     Returns a <c>BadRequest</c> result if the volume value is zero or negative.
     /// </returns>
     [HttpGet("create-density-from-massUnit-and-volumeUnit")]
-    public IActionResult CreateDensityFromMassAndVolume(MassUnit massUnit, double massValue, VolumeUnit volumeUnit, double volumeValue)
+    public ActionResult<Density> CreateDensityFromMassAndVolume(MassUnit massUnit, double massValue, VolumeUnit volumeUnit, double volumeValue)
     {
         if (volumeValue == 0) return BadRequest("Volume value must be positive quantity value");
-        
+
         var mass = Mass.From(massValue, massUnit);
         var volume = Volume.From(volumeValue, volumeUnit);
-        
+
         Density density = mass / volume;
-       
+
         return Ok(density);
     }
 
@@ -154,7 +154,7 @@ public class UnitsNetConverterController: ControllerBase
     )]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public IActionResult ConvertToUnitByAbbreviation([FromBody] IQuantity quantity, string targetUnitAbbreviation)
+    public ActionResult<IQuantity> ConvertToUnitByAbbreviation([FromBody] IQuantity quantity, string targetUnitAbbreviation)
     {
         if (!UnitParser.Default.TryParse(targetUnitAbbreviation, quantity.Unit.GetType(), out var targetUnit))
             return BadRequest("Invalid quantity or unit abbreviation.");
@@ -183,7 +183,7 @@ public class UnitsNetConverterController: ControllerBase
     /// </response>
     [HttpPost("convert-density-unit")]
     // public IActionResult ConvertDensityUnitV1([FromBody] IQuantity quantity, [FromQuery] DensityUnit toDensityUnit)  worked
-    public IActionResult ConvertDensityUnit([FromBody] Density quantity, [FromQuery] DensityUnit toDensityUnit)
+    public ActionResult<Density> ConvertDensityUnit([FromBody] Density quantity, [FromQuery] DensityUnit toDensityUnit)
     {
         var convertedDensityUnit = quantity.ToUnit(toDensityUnit);
         return Ok(convertedDensityUnit);
@@ -219,7 +219,7 @@ public class UnitsNetConverterController: ControllerBase
         Description = "This route is deprecated and will be removed in future versions. Creates a quantity based on the provided unit abbreviation name and value.")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public IActionResult GetConstructQuantityByAbbreviation(string unitAbbreviation, double value)
+    public ActionResult<IQuantity> GetConstructQuantityByAbbreviation(string unitAbbreviation, double value)
     {
         IQuantity quantity;
         try

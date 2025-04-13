@@ -4,14 +4,20 @@ using JsonConverter = Newtonsoft.Json.JsonConverter;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var converterType = builder.Configuration.GetSection("JsonConverter:Type").Value;
-var converterTypeName = Type.GetType(converterType)?.FullName;
-JsonConverter globalJsonConverter = converterTypeName == typeof(AbbreviatedUnitsConverter).FullName
-    ? new AbbreviatedUnitsConverter()
-    : new UnitsNetIQuantityJsonConverter();
+var serializationOptions = builder.Configuration.GetSection("JsonConverter").Get<SerializationOptions>();
+switch (serializationOptions.Serializer)
+{
+    case SerializerType.NewtonsoftJson:
+    {
+        builder.Services.AddControllersWithNewtonsoftConverter(serializationOptions.Schema);
+        break;
+    }
+    //case SerializerType.SystemTextJson: not yet implemented
+    default:
+        throw new ArgumentOutOfRangeException();
+}
 
-builder.Services.AddCustomJson(globalJsonConverter);
-builder.Services.AddCustomSwagger(globalJsonConverter);
+builder.Services.AddCustomSwagger(serializationOptions.Schema);
 
 var app = builder.Build();
 

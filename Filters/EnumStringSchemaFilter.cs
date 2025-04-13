@@ -13,7 +13,7 @@ namespace ASP.Net.UnitsNetSerializationExamples.Filters;
 /// with string representations of the enumeration names. It also sets the schema type
 /// to "string" and clears the format.
 /// </remarks>
-public class QuantitiesSchemaFilter : ISchemaFilter
+public class EnumStringSchemaFilter : ISchemaFilter
 {
     public void Apply(OpenApiSchema schema, SchemaFilterContext context)
     {
